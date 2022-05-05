@@ -40,7 +40,7 @@ const dataManager = (function () {
           function completeLayers(layers, comps) {
             var layerData;
             var i;
-            var len = layers.length;
+            var len = layers.length; // layers ? layers.length : 0;
             var j;
             var jLen;
             var k;

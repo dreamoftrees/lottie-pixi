@@ -20,6 +20,7 @@ const ShapeModifiers = (function () {
   }
 
   function getModifier(nm, elem, data) {
+    console.log('ShapeModifiers::getModifier()', nm);
     return new modifiers[nm](elem, data);
   }
 

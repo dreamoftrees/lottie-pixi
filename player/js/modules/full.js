@@ -10,6 +10,7 @@ import RoundCornersModifier from '../utils/shapes/RoundCornersModifier';
 import CanvasRenderer from '../renderers/CanvasRenderer';
 import HybridRenderer from '../renderers/HybridRenderer';
 import SVGRenderer from '../renderers/SVGRenderer';
+import PixiRenderer from '../renderers/PixiRenderer';
 import {
   registerRenderer,
 } from '../renderers/renderersManager';
@@ -31,6 +32,7 @@ import SVGGaussianBlurEffect from '../elements/svgElements/effects/SVGGaussianBl
 registerRenderer('canvas', CanvasRenderer);
 registerRenderer('html', HybridRenderer);
 registerRenderer('svg', SVGRenderer);
+registerRenderer('pixi', PixiRenderer);
 
 // Registering shape modifiers
 ShapeModifiers.registerModifier('tm', TrimModifier);

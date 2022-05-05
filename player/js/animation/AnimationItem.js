@@ -71,6 +71,7 @@ AnimationItem.prototype.setParams = function (params) {
   } else if (params.renderer) {
     animType = params.renderer;
   }
+  console.log('Get renderer', animType);
   const RendererClass = getRenderer(animType);
   this.renderer = new RendererClass(this, params.rendererSettings);
   this.imagePreloader.setCacheType(animType, this.renderer.globalData.defs);
@@ -277,6 +278,7 @@ AnimationItem.prototype.imagesLoaded = function () {
 AnimationItem.prototype.preloadImages = function () {
   this.imagePreloader.setAssetsPath(this.assetsPath);
   this.imagePreloader.setPath(this.path);
+  console.log('AnimationItem::preloadImages()', this.animationData);
   this.imagePreloader.loadAssets(this.animationData.assets, this.imagesLoaded.bind(this));
 };
 

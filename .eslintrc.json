@@ -13,6 +13,7 @@
         }
     },
     "rules": {
+        "import/no-unresolved": "off",
         "no-var": "off",
         "prefer-destructuring": "off",
         "prefer-template": "off",

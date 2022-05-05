@@ -21,6 +21,7 @@ BaseRenderer.prototype.checkLayers = function (num) {
 };
 
 BaseRenderer.prototype.createItem = function (layer) {
+  console.log('BaseRenderer::createItem', layer);
   switch (layer.ty) {
     case 2:
       return this.createImage(layer);

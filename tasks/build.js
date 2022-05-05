@@ -4,7 +4,7 @@ const UglifyJS = require("uglify-js");
 const rootFolder = 'player/';
 const bm_version = '5.8.1';
 const buildReducedVersion = process.argv[2] === 'reduced'
-const defaultBuilds = ['full','svg_light','svg','canvas','html', 'canvas_light', 'html_light', 'canvas_worker', 'lottie_worker']
+const defaultBuilds = ['full','svg_light','svg','pixi_light', 'pixi', 'canvas','html', 'canvas_light', 'html_light', 'canvas_worker', 'lottie_worker']
 
 const scripts = [
 	{
@@ -582,7 +582,7 @@ function uglifyCode(code) {
 	return new Promise((resolve, reject)=>{
 		try {
 			const result = UglifyJS.minify(code, {
-				output: 
+				output:
 					{
 						ascii_only:true
 					},
@@ -738,7 +738,17 @@ function buildVersions(scripts) {
 			fileName: 'lottie_light_html.min.js',
 			build: 'html_light',
 			process: uglifyCode
-		}];
+		},
+    {
+      fileName: 'lottie_pixi.js',
+      build: 'pixi',
+      process: noop
+    },
+    {
+      fileName: 'lottie_light_pixi.js',
+      build: 'pixi_light',
+      process: noop
+    }];
 
 		if (buildReducedVersion) {
 			versions = versions.splice(0,1);

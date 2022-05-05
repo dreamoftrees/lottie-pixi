@@ -576,7 +576,8 @@
             function completeLayers(layers, comps) {
               var layerData;
               var i;
-              var len = layers.length;
+              var len = layers.length; // layers ? layers.length : 0;
+
               var j;
               var jLen;
               var k;
@@ -1728,6 +1729,7 @@
       animType = params.renderer;
     }
 
+    console.log('Get renderer', animType);
     var RendererClass = getRenderer(animType);
     this.renderer = new RendererClass(this, params.rendererSettings);
     this.imagePreloader.setCacheType(animType, this.renderer.globalData.defs);
@@ -1915,6 +1917,7 @@
   AnimationItem.prototype.preloadImages = function () {
     this.imagePreloader.setAssetsPath(this.assetsPath);
     this.imagePreloader.setPath(this.path);
+    console.log('AnimationItem::preloadImages()', this.animationData);
     this.imagePreloader.loadAssets(this.animationData.assets, this.imagesLoaded.bind(this));
   };
 
@@ -5261,6 +5264,7 @@
     }
 
     function getModifier(nm, elem, data) {
+      console.log('ShapeModifiers::getModifier()', nm);
       return new modifiers[nm](elem, data);
     }
 
@@ -8552,8 +8556,8 @@
     initExpressions: function initExpressions() {
       this.layerInterface = LayerExpressionInterface(this);
 
-      if (this.data.hasMask && this.maskManager) {
-        this.layerInterface.registerMaskInterface(this.maskManager);
+      if (this.data.hasMask && this.maskManager) {// TODO fix masking
+        // this.layerInterface.registerMaskInterface(this.maskManager);
       }
 
       var effectsInterface = EffectsExpressionInterface.createEffectsInterface(this, this.layerInterface);
@@ -8851,6 +8855,8 @@
   };
 
   BaseRenderer.prototype.createItem = function (layer) {
+    console.log('BaseRenderer::createItem', layer);
+
     switch (layer.ty) {
       case 2:
         return this.createImage(layer);
