@@ -511,13 +511,13 @@ PXShapeElement.prototype.renderStroke = function (styleData, itemData, groupTran
 
 PXShapeElement.prototype.showInnerContent = function () {
   // TODO: implement show inner
-  this.globalData.pixiApp.stage.addChild(this.bg);
+  this.globalData.pixiApplication.stage.addChild(this.bg);
 };
 
 PXShapeElement.prototype.hideInnerContent = function () {
   // TODO: implement hide inner
   // this.globalData.pixiApp.stage.addChild(this.img);
-  this.globalData.pixiApp.stage.removeChild(this.bg);
+  this.globalData.pixiApplication.stage.removeChild(this.bg);
 };
 
 PXShapeElement.prototype.destroy = function () {

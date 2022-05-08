@@ -25,10 +25,14 @@ PXImageElement.prototype.initElement = RenderableDOMElement.prototype.initElemen
 PXImageElement.prototype.createContent = function () {
   console.log('PXImageElement::createContent', this.assetData, this.data.hasMask);
 
-  const imageAsset = this.globalData.imageLoader.getAsset(this.assetData);
-  console.log('PXImageElement:: Image Asset', imageAsset.currentSrc);
-  this.img = PIXI.Sprite.from(imageAsset.currentSrc); // new PIXI.Sprite();
+  // const imageAsset = this.globalData.imageLoader.getAsset(this.assetData);
+  // console.log('PXImageElement:: Image Asset', imageAsset, this.assetData);
 
+  const pixiLoader = PIXI.Loader.shared;
+  const pixiTexture = pixiLoader.resources[this.assetData.id].texture;
+  // console.log('Check pixi loader', pixiTexture, pixiLoader, imageAsset);
+  // this.img = PIXI.Sprite.from(pixiTexture); // new PIXI.Sprite();
+  this.img = new PIXI.Sprite(pixiTexture);
   // this.img.width = this.assetData.w;
   // this.img.height = this.assetData.h;
 
@@ -66,13 +70,13 @@ PXImageElement.prototype.renderInnerContent = function () {
 };
 
 PXImageElement.prototype.showInnerContent = function () {
-  // this.globalData.pixiApp.stage.addChild(this.img);
+  // this.globalData.pixiApplication.stage.addChild(this.img);
   console.log('PXImageElement::showInnerContent()');
   // this.img.renderable = true;
 };
 
 PXImageElement.prototype.hideInnerContent = function () {
-  // this.globalData.pixiApp.stage.addChild(this.img);
+  // this.globalData.pixiApplication.stage.addChild(this.img);
   console.log('PXImageElement::hideInnerContent()');
   // this.img.renderable = false;
 };

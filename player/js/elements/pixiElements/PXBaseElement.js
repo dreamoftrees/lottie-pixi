@@ -14,7 +14,7 @@ PXBaseElement.prototype = {
   createElements: function () {},
   initRendererElement: function () {
     this.baseElement = new PIXI.Container();
-    this.globalData.pixiApp.stage.addChild(this.baseElement);
+    this.globalData.pixiApplication.stage.addChild(this.baseElement);
     this.layerElement = this.baseElement;
   },
   createContainerElements: function () {
@@ -43,6 +43,8 @@ PXBaseElement.prototype = {
     if (this.finalTransform && this.finalTransform.mProp.container.data.nm === 'electric_globe.png') {
       console.log('PXBaseElement::renderElement', this.transformedElement, this.finalTransform);
       console.log('PXBaseElement::render alpha >>', this.finalTransform && this.finalTransform.mProp);
+
+      // TODO: Somehow apply Ae parent linking / transform
     }
     // console.log('>> to2DCss', this.finalTransform.mat.to2dCSS());
     // console.log('>> toCss', this.finalTransform.mat.toCSS());

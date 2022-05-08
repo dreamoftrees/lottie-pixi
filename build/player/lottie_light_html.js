@@ -1729,7 +1729,7 @@
       animType = params.renderer;
     }
 
-    console.log('Get renderer', animType);
+    console.log('Get renderer', animType, params, this);
     var RendererClass = getRenderer(animType);
     this.renderer = new RendererClass(this, params.rendererSettings);
     this.imagePreloader.setCacheType(animType, this.renderer.globalData.defs);

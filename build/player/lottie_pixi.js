@@ -1729,7 +1729,7 @@
       animType = params.renderer;
     }
 
-    console.log('Get renderer', animType);
+    console.log('Get renderer', animType, params, this);
     var RendererClass = getRenderer(animType);
     this.renderer = new RendererClass(this, params.rendererSettings);
     this.imagePreloader.setCacheType(animType, this.renderer.globalData.defs);
@@ -57170,7 +57170,7 @@
     createElements: function createElements() {},
     initRendererElement: function initRendererElement() {
       this.baseElement = new Container();
-      this.globalData.pixiApp.stage.addChild(this.baseElement);
+      this.globalData.pixiApplication.stage.addChild(this.baseElement);
       this.layerElement = this.baseElement;
     },
     createContainerElements: function createContainerElements() {
@@ -57429,11 +57429,14 @@
   PXImageElement.prototype.initElement = RenderableDOMElement.prototype.initElement;
 
   PXImageElement.prototype.createContent = function () {
-    console.log('PXImageElement::createContent', this.assetData, this.data.hasMask);
-    var imageAsset = this.globalData.imageLoader.getAsset(this.assetData);
-    console.log('PXImageElement:: Image Asset', imageAsset.currentSrc);
-    this.img = Sprite.from(imageAsset.currentSrc); // new PIXI.Sprite();
-    // this.img.width = this.assetData.w;
+    console.log('PXImageElement::createContent', this.assetData, this.data.hasMask); // const imageAsset = this.globalData.imageLoader.getAsset(this.assetData);
+    // console.log('PXImageElement:: Image Asset', imageAsset, this.assetData);
+
+    var pixiLoader = Loader.shared;
+    var pixiTexture = pixiLoader.resources[this.assetData.id].texture; // console.log('Check pixi loader', pixiTexture, pixiLoader, imageAsset);
+    // this.img = PIXI.Sprite.from(pixiTexture); // new PIXI.Sprite();
+
+    this.img = new Sprite(pixiTexture); // this.img.width = this.assetData.w;
     // this.img.height = this.assetData.h;
 
     var imgW = this.img.width;
@@ -57462,20 +57465,20 @@
   };
 
   PXImageElement.prototype.renderInnerContent = function () {
-    // const matProps = this.finalTransform.mat.props;
-    // const matrix = new PIXI.Matrix(matProps[0], matProps[1], matProps[4], matProps[5], matProps[12], matProps[13]);
-    // this.img.transform.setFromMatrix(matrix);
-    // console.log('PXImage::renderInnerConent', matrix);
+    var matProps = this.finalTransform.mat.props;
+    var matrix = new Matrix(matProps[0], matProps[1], matProps[4], matProps[5], matProps[12], matProps[13]);
+    this.img.transform.setFromMatrix(matrix);
+    console.log('PXImage::renderInnerConent', matrix);
     console.log('PXImageElement::renderInnerContent()', this.img.renderable, this.img.width);
   };
 
   PXImageElement.prototype.showInnerContent = function () {
-    // this.globalData.pixiApp.stage.addChild(this.img);
+    // this.globalData.pixiApplication.stage.addChild(this.img);
     console.log('PXImageElement::showInnerContent()'); // this.img.renderable = true;
   };
 
   PXImageElement.prototype.hideInnerContent = function () {
-    // this.globalData.pixiApp.stage.addChild(this.img);
+    // this.globalData.pixiApplication.stage.addChild(this.img);
     console.log('PXImageElement::hideInnerContent()'); // this.img.renderable = false;
   };
 
@@ -58399,13 +58402,13 @@
 
   PXShapeElement.prototype.showInnerContent = function () {
     // TODO: implement show inner
-    this.globalData.pixiApp.stage.addChild(this.bg);
+    this.globalData.pixiApplication.stage.addChild(this.bg);
   };
 
   PXShapeElement.prototype.hideInnerContent = function () {
     // TODO: implement hide inner
     // this.globalData.pixiApp.stage.addChild(this.img);
-    this.globalData.pixiApp.stage.removeChild(this.bg);
+    this.globalData.pixiApplication.stage.removeChild(this.bg);
   };
 
   PXShapeElement.prototype.destroy = function () {
@@ -58443,19 +58446,22 @@
   extendPrototype([BaseElement, TransformElement, HierarchyElement, FrameElement], NullElement);
 
   function PixiRendererBase(animationItem, config) {
-    console.log('PIXI Renderer Base', animationItem, config);
+    console.log('PIXIRendererBase::constructor', animationItem, config);
     this.animationItem = animationItem;
     this.layers = null;
     this.renderConfig = {
       dpr: config && config.dpr || window.devicePixelRatio || 1,
-      progressiveLoad: config && config.progressiveLoad || false
+      progressiveLoad: config && config.progressiveLoad || false,
+      preserveAspectRatio: config && config.preserveAspectRatio,
+      pixiApplication: config && config.pixiApplication
     };
     this.renderedFrame = -1;
     this.globalData = {
       frameNum: -1,
       _mdf: false,
       renderConfig: this.renderConfig,
-      currentGlobalAlpha: -1
+      currentGlobalAlpha: -1,
+      isAssetsLoaded: false
     };
     this.elements = [];
     this.pendingElements = [];
@@ -58485,27 +58491,38 @@
   PixiRendererBase.prototype.createSolid = function (data) {};
 
   PixiRendererBase.prototype.configAnimation = function (animData) {
+    var _this = this;
+
     console.log('PixiRendererBase::configAnimation() Pixi Animation', animData, this.renderConfig);
 
     if (!this.renderConfig.preserveAspectRatio) {
       this.renderConfig.preserveAspectRatio = 'none';
     }
 
-    this.pixiApp = new Application({
-      width: animData.w,
-      height: animData.h,
-      resolution: this.renderConfig.dpr,
-      // autoResize: true,
-      // resizeTo: window,
-      // backgroundAlpha: 1,
-      backgroundColor: 0xFF0000
-    });
+    if (this.renderConfig.pixiApplication) {
+      // Use existing pixi
+      console.log('PixiRendererBase::use existing pixi');
+      this.pixiApplication = this.renderConfig.pixiApplication;
+    } else {
+      console.log('PixiRendererBase::new pixi');
+      this.pixiApplication = new Application({
+        width: animData.w,
+        height: animData.h,
+        resolution: this.renderConfig.dpr,
+        // autoResize: true,
+        // resizeTo: window,
+        // backgroundAlpha: 1,
+        backgroundColor: 0xFF0000
+      });
+    } // TODO: Remove / Test square to show lottie content
+
+
     var graphics = new Graphics();
-    graphics.beginFill(0xDE3249);
+    graphics.beginFill(0x0000FF);
     graphics.drawRect(50, 50, 100, 100);
     graphics.endFill();
-    this.pixiApp.stage.addChild(graphics);
-    this.animationItem.wrapper.appendChild(this.pixiApp.view);
+    this.pixiApplication.stage.addChild(graphics);
+    this.animationItem.wrapper.appendChild(this.pixiApplication.view);
     this.canvasContext = {}; // this.pixiApp.view;
 
     this.data = animData;
@@ -58520,11 +58537,29 @@
     };
     this.setupGlobalData(animData, document.body);
     this.globalData.canvasContext = this.canvasContext;
-    this.globalData.pixiApp = this.pixiApp;
+    this.globalData.pixiApplication = this.pixiApplication;
     this.globalData.progressiveLoad = this.renderConfig.progressiveLoad;
     this.globalData.transformCanvas = this.transformCanvas;
     this.elements = createSizedArray(animData.layers.length);
-    this.updateContainerSize();
+    this.updateContainerSize(); // Preload the assets
+
+    console.log('PixiRendererBase::configAnimation()', animData, this.pixiApplication);
+    var pixiLoader = Loader.shared;
+    animData.assets.forEach(function (asset) {
+      if (asset.u) {
+        // const assetPath = `${asset.u}${asset.p}`;
+        var assetPath = _this.globalData.getAssetsPath(asset);
+
+        console.log("PixiRendererBase::load asset, ".concat(asset.id, ", ").concat(assetPath), asset);
+        pixiLoader.add(asset.id, assetPath);
+      }
+    });
+    pixiLoader.load(function (loader, resources) {
+      console.log('PixiLoader::Assets loaded!', loader, resources);
+      _this.globalData.isAssetsLoaded = true;
+
+      _this.animationItem.checkLoaded();
+    });
   };
 
   PixiRendererBase.prototype.ctxTransform = function (props) {
@@ -58560,8 +58595,8 @@
     }
 
     this.elements.length = 0;
-    this.globalData.pixiApp.destroy();
-    this.globalData.pixiApp = null;
+    this.globalData.pixiApplication.destroy();
+    this.globalData.pixiApplication = null;
     this.animationItem.container = null;
     this.destroyed = true;
   };
@@ -58593,12 +58628,12 @@
       h = window.innerWidth / ratio;
     }
 
-    console.log('PixiRendererBase::resize', w, h, ratio, this.renderConfig, this.data, this.pixiApp); // elementWidth = w;
+    console.log('PixiRendererBase::resize', w, h, ratio, this.renderConfig, this.data, this.pixiApplication); // elementWidth = w;
     // elementHeight = h;
 
     console.log('PixiRendererBase::has container', this.animationItem.wrapper, this.animationItem.container);
     console.log('PixiRendererBase::resize next', elementWidth, elementHeight);
-    console.log('PixiRendererBase::resize current', this.pixiApp.width, this.pixiApp.height);
+    console.log('PixiRendererBase::resize current', this.pixiApplication.width, this.pixiApplication.height);
     var elementRel;
     var animationRel;
 
@@ -58646,26 +58681,25 @@
       this.transformCanvas.ty = 0;
     }
 
-    this.transformCanvas.props = [this.transformCanvas.sx, 0, 0, 0, 0, this.transformCanvas.sy, 0, 0, 0, 0, 1, 0, this.transformCanvas.tx, this.transformCanvas.ty, 0, 1];
-    /* var i, len = this.elements.length;
-      for(i=0;i<len;i+=1){
-          if(this.elements[i] && this.elements[i].data.ty === 0){
-              this.elements[i].resize(this.globalData.transformCanvas);
-          }
-      } */
+    this.transformCanvas.props = [this.transformCanvas.sx, 0, 0, 0, 0, this.transformCanvas.sy, 0, 0, 0, 0, 1, 0, this.transformCanvas.tx, this.transformCanvas.ty, 0, 1]; // var i, len = this.elements.length;
+    // for(i=0;i<len;i+=1){
+    //     if(this.elements[i] && this.elements[i].data.ty === 0){
+    //         this.elements[i].resize(this.globalData.transformCanvas);
+    //     }
+    // }
     // this.ctxTransform(this.transformCanvas.props);
-    // this.pixiApp.renderer.resize(this.transformCanvas.w, this.transformCanvas.h);
+    // this.pixiApplication.renderer.resize(this.transformCanvas.w, this.transformCanvas.h);
 
     console.log('Updating size', w, h, this.transformCanvas);
-    this.pixiApp.renderer.view.style.width = '100%'; // elementWidth + 'px';
+    this.pixiApplication.renderer.view.style.width = '100%'; // elementWidth + 'px';
 
-    this.pixiApp.renderer.view.style.height = '100%'; // elementHeight + 'px';
+    this.pixiApplication.renderer.view.style.height = '100%'; // elementHeight + 'px';
     // this.canvasContext.beginPath();
     // this.canvasContext.rect(0, 0, this.transformCanvas.w, this.transformCanvas.h);
     // this.canvasContext.closePath();
     // this.canvasContext.clip();
 
-    this.renderFrame(this.renderedFrame, true);
+    console.log('Render frame next!'); // this.renderFrame(this.renderedFrame, true);
   };
 
   PixiRendererBase.prototype.buildItem = function (pos) {
@@ -58753,185 +58787,15 @@
 
   PixiRendererBase.prototype.show = function () {};
 
-  function ICompElement() {}
-
-  extendPrototype([BaseElement, TransformElement, HierarchyElement, FrameElement, RenderableDOMElement], ICompElement);
-
-  ICompElement.prototype.initElement = function (data, globalData, comp) {
-    this.initFrame();
-    this.initBaseData(data, globalData, comp);
-    this.initTransform(data, globalData, comp);
-    this.initRenderable();
-    this.initHierarchy();
-    this.initRendererElement();
-    this.createContainerElements();
-    this.createRenderableComponents();
-
-    if (this.data.xt || !globalData.progressiveLoad) {
-      this.buildAllItems();
-    }
-
-    this.hide();
-  };
-  /* ICompElement.prototype.hide = function(){
-      if(!this.hidden){
-          this.hideElement();
-          var i,len = this.elements.length;
-          for( i = 0; i < len; i+=1 ){
-              if(this.elements[i]){
-                  this.elements[i].hide();
-              }
-          }
-      }
-  }; */
-
-
-  ICompElement.prototype.prepareFrame = function (num) {
-    this._mdf = false;
-    this.prepareRenderableFrame(num);
-    this.prepareProperties(num, this.isInRange);
-
-    if (!this.isInRange && !this.data.xt) {
-      return;
-    }
-
-    if (!this.tm._placeholder) {
-      var timeRemapped = this.tm.v;
-
-      if (timeRemapped === this.data.op) {
-        timeRemapped = this.data.op - 1;
-      }
-
-      this.renderedFrame = timeRemapped;
-    } else {
-      this.renderedFrame = num / this.data.sr;
-    }
-
-    var i;
-    var len = this.elements.length;
-
-    if (!this.completeLayers) {
-      this.checkLayers(this.renderedFrame);
-    } // This iteration needs to be backwards because of how expressions connect between each other
-
-
-    for (i = len - 1; i >= 0; i -= 1) {
-      if (this.completeLayers || this.elements[i]) {
-        this.elements[i].prepareFrame(this.renderedFrame - this.layers[i].st);
-
-        if (this.elements[i]._mdf) {
-          this._mdf = true;
-        }
-      }
-    }
-  };
-
-  ICompElement.prototype.renderInnerContent = function () {
-    var i;
-    var len = this.layers.length;
-
-    for (i = 0; i < len; i += 1) {
-      if (this.completeLayers || this.elements[i]) {
-        this.elements[i].renderFrame();
-      }
-    }
-  };
-
-  ICompElement.prototype.setElements = function (elems) {
-    this.elements = elems;
-  };
-
-  ICompElement.prototype.getElements = function () {
-    return this.elements;
-  };
-
-  ICompElement.prototype.destroyElements = function () {
-    var i;
-    var len = this.layers.length;
-
-    for (i = 0; i < len; i += 1) {
-      if (this.elements[i]) {
-        this.elements[i].destroy();
-      }
-    }
-  };
-
-  ICompElement.prototype.destroy = function () {
-    this.destroyElements();
-    this.destroyBaseElement();
-  };
-
-  function PXCompElement(data, globalData, comp) {
-    console.log('PXCompElement', data, globalData, comp);
-    this.renderCount = 0;
-    this.completeLayers = false;
-    this.layers = data.layers;
-    this.pendingElements = [];
-    this.elements = createSizedArray(this.layers.length);
-    this.initElement(data, globalData, comp);
-    this.bg = new Graphics();
-    this.tm = data.tm ? PropertyFactory.getProp(this, data.tm, 0, globalData.frameRate, this) : {
-      _placeholder: true
-    };
-  }
-
-  extendPrototype([PixiRendererBase, TransformElement, ICompElement, PXBaseElement], PXCompElement);
-
-  PXCompElement.prototype.renderInnerContent = function () {
-    // console.log('Render Inner Content', this.renderCount);
-    this.renderCount += 1;
-    var graphics = this.bg;
-    graphics.clear(); // graphics.beginFill(0xFF00FF);
-
-    graphics.drawRect(0, 0, this.data.w, this.data.h);
-    graphics.endFill(); // console.log('Transform comp', this.finalTransform, this.transformMat);
-
-    var matProps = this.finalTransform.mat.props;
-    var matrix = new Matrix(matProps[0], matProps[1], matProps[4], matProps[5], matProps[12], matProps[13]);
-    graphics.transform.setFromMatrix(matrix);
-    var i;
-    var len = this.layers.length;
-
-    for (i = len - 1; i >= 0; i -= 1) {
-      if (this.completeLayers || this.elements[i]) {
-        this.elements[i].renderFrame();
-      }
-    }
-  };
-
-  PXCompElement.prototype.destroy = function () {
-    var i;
-    var len = this.layers.length;
-
-    for (i = len - 1; i >= 0; i -= 1) {
-      if (this.elements[i]) {
-        this.elements[i].destroy();
-      }
-    }
-
-    this.layers = null;
-    this.elements = null;
-  };
-
-  PXCompElement.prototype.createComp = function (data) {
-    return new PXCompElement(data, this.globalData, this);
-  };
-
-  PXCompElement.prototype.hideInnerContent = function () {
-    this.globalData.pixiApp.stage.removeChild(this.bg);
-  };
-
-  PXCompElement.prototype.showInnerContent = function () {
-    this.globalData.pixiApp.stage.addChild(this.bg);
-  };
-
   function PixiRenderer(animationItem, config) {
-    console.log('PIXI Renderer', animationItem, config);
+    console.log('PIXIRenderer::const', animationItem, config);
     this.animationItem = animationItem;
     this.layers = null;
     this.renderConfig = {
       dpr: config && config.dpr || window.devicePixelRatio || 1,
-      progressiveLoad: config && config.progressiveLoad || false
+      progressiveLoad: config && config.progressiveLoad || false,
+      preserveAspectRatio: config && config.preserveAspectRatio,
+      pixiApplication: config && config.pixiApplication
     };
     this.renderedFrame = -1;
     this.globalData = {
@@ -58952,6 +58816,36 @@
   PixiRenderer.prototype.createComp = function (data) {
     console.log('Pixi create comp::', data);
     return false; // return new PXCompElement(data, this.globalData, this);
+  }; // AnimationItem.prototype.waitForFontsLoaded = function () {
+  //   console.log('AnimationItem::waitForFontsLoaded() *** Trying to hack this method', this.renderer);
+  //   // this.checkLoaded();
+  //   // setTimeout(this.waitForFontsLoaded.bind(this), 1000);
+  // };
+
+
+  AnimationItem.prototype.checkLoaded = function () {
+    console.log('AnimationItem::checkLoaded() ****', this.renderer);
+
+    if (this.renderer.globalData.isAssetsLoaded) {
+      if (!this.isLoaded && this.renderer.globalData.fontManager.isLoaded && (this.imagePreloader.loadedImages() || this.renderer.rendererType !== 'canvas') && this.imagePreloader.loadedFootages()) {
+        this.isLoaded = true;
+        var expressionsPlugin = getExpressionsPlugin();
+
+        if (expressionsPlugin) {
+          expressionsPlugin.initExpressions(this);
+        }
+
+        this.renderer.initItems();
+        setTimeout(function () {
+          this.trigger('DOMLoaded');
+        }.bind(this), 0);
+        this.gotoFrame();
+
+        if (this.autoplay) {
+          this.play();
+        }
+      }
+    }
   };
 
   registerRenderer('pixi', PixiRenderer); // Registering shape modifiers

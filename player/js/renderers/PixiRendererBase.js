@@ -12,13 +12,15 @@ import PXShapeElement from '../elements/pixiElements/PXShapeElement';
 import NullElement from '../elements/NullElement';
 
 function PixiRendererBase(animationItem, config) {
-  console.log('PIXI Renderer Base', animationItem, config);
+  console.log('PIXIRendererBase::constructor', animationItem, config);
   this.animationItem = animationItem;
   this.layers = null;
 
   this.renderConfig = {
     dpr: (config && config.dpr) || window.devicePixelRatio || 1,
     progressiveLoad: (config && config.progressiveLoad) || false,
+    preserveAspectRatio: config && config.preserveAspectRatio,
+    pixiApplication: config && config.pixiApplication,
   };
 
   this.renderedFrame = -1;
@@ -27,6 +29,7 @@ function PixiRendererBase(animationItem, config) {
     _mdf: false,
     renderConfig: this.renderConfig,
     currentGlobalAlpha: -1,
+    isAssetsLoaded: false,
   };
   this.elements = [];
   this.pendingElements = [];
@@ -63,23 +66,31 @@ PixiRendererBase.prototype.configAnimation = function (animData) {
     this.renderConfig.preserveAspectRatio = 'none';
   }
 
-  this.pixiApp = new PIXI.Application({
-    width: animData.w,
-    height: animData.h,
-    resolution: this.renderConfig.dpr,
-    // autoResize: true,
-    // resizeTo: window,
-    // backgroundAlpha: 1,
-    backgroundColor: 0xFF0000,
-  });
+  if (this.renderConfig.pixiApplication) {
+    // Use existing pixi
+    console.log('PixiRendererBase::use existing pixi');
+    this.pixiApplication = this.renderConfig.pixiApplication;
+  } else {
+    console.log('PixiRendererBase::new pixi');
+    this.pixiApplication = new PIXI.Application({
+      width: animData.w,
+      height: animData.h,
+      resolution: this.renderConfig.dpr,
+      // autoResize: true,
+      // resizeTo: window,
+      // backgroundAlpha: 1,
+      backgroundColor: 0xFF0000,
+    });
+  }
 
+  // TODO: Remove / Test square to show lottie content
   const graphics = new PIXI.Graphics();
-  graphics.beginFill(0xDE3249);
+  graphics.beginFill(0x0000FF);
   graphics.drawRect(50, 50, 100, 100);
   graphics.endFill();
-  this.pixiApp.stage.addChild(graphics);
+  this.pixiApplication.stage.addChild(graphics);
 
-  this.animationItem.wrapper.appendChild(this.pixiApp.view);
+  this.animationItem.wrapper.appendChild(this.pixiApplication.view);
   this.canvasContext = {}; // this.pixiApp.view;
   this.data = animData;
   this.layers = animData.layers;
@@ -93,11 +104,30 @@ PixiRendererBase.prototype.configAnimation = function (animData) {
   };
   this.setupGlobalData(animData, document.body);
   this.globalData.canvasContext = this.canvasContext;
-  this.globalData.pixiApp = this.pixiApp;
+  this.globalData.pixiApplication = this.pixiApplication;
   this.globalData.progressiveLoad = this.renderConfig.progressiveLoad;
   this.globalData.transformCanvas = this.transformCanvas;
   this.elements = createSizedArray(animData.layers.length);
   this.updateContainerSize();
+
+  // Preload the assets
+  console.log('PixiRendererBase::configAnimation()', animData, this.pixiApplication);
+  const pixiLoader = PIXI.Loader.shared;
+  animData.assets.forEach((asset) => {
+    if (asset.u) {
+      // const assetPath = `${asset.u}${asset.p}`;
+      const assetPath = this.globalData.getAssetsPath(asset);
+      console.log(`PixiRendererBase::load asset, ${asset.id}, ${assetPath}`, asset);
+      pixiLoader.add(asset.id, assetPath);
+    }
+  });
+
+  pixiLoader.load((loader, resources) => {
+    console.log('PixiLoader::Assets loaded!', loader, resources);
+
+    this.globalData.isAssetsLoaded = true;
+    this.animationItem.checkLoaded();
+  });
 };
 
 PixiRendererBase.prototype.ctxTransform = function (props) {
@@ -129,8 +159,8 @@ PixiRendererBase.prototype.destroy = function () {
     }
   }
   this.elements.length = 0;
-  this.globalData.pixiApp.destroy();
-  this.globalData.pixiApp = null;
+  this.globalData.pixiApplication.destroy();
+  this.globalData.pixiApplication = null;
   this.animationItem.container = null;
   this.destroyed = true;
 };
@@ -159,12 +189,12 @@ PixiRendererBase.prototype.updateContainerSize = function () {
     w = window.innerWidth;
     h = window.innerWidth / ratio;
   }
-  console.log('PixiRendererBase::resize', w, h, ratio, this.renderConfig, this.data, this.pixiApp);
+  console.log('PixiRendererBase::resize', w, h, ratio, this.renderConfig, this.data, this.pixiApplication);
   // elementWidth = w;
   // elementHeight = h;
   console.log('PixiRendererBase::has container', this.animationItem.wrapper, this.animationItem.container);
   console.log('PixiRendererBase::resize next', elementWidth, elementHeight);
-  console.log('PixiRendererBase::resize current', this.pixiApp.width, this.pixiApp.height);
+  console.log('PixiRendererBase::resize current', this.pixiApplication.width, this.pixiApplication.height);
   var elementRel;
   var animationRel;
   if (this.renderConfig.preserveAspectRatio.indexOf('meet') !== -1 || this.renderConfig.preserveAspectRatio.indexOf('slice') !== -1) {
@@ -209,23 +239,24 @@ PixiRendererBase.prototype.updateContainerSize = function () {
     this.transformCanvas.ty = 0;
   }
   this.transformCanvas.props = [this.transformCanvas.sx, 0, 0, 0, 0, this.transformCanvas.sy, 0, 0, 0, 0, 1, 0, this.transformCanvas.tx, this.transformCanvas.ty, 0, 1];
-  /* var i, len = this.elements.length;
-    for(i=0;i<len;i+=1){
-        if(this.elements[i] && this.elements[i].data.ty === 0){
-            this.elements[i].resize(this.globalData.transformCanvas);
-        }
-    } */
+  // var i, len = this.elements.length;
+  // for(i=0;i<len;i+=1){
+  //     if(this.elements[i] && this.elements[i].data.ty === 0){
+  //         this.elements[i].resize(this.globalData.transformCanvas);
+  //     }
+  // }
   // this.ctxTransform(this.transformCanvas.props);
-  // this.pixiApp.renderer.resize(this.transformCanvas.w, this.transformCanvas.h);
+  // this.pixiApplication.renderer.resize(this.transformCanvas.w, this.transformCanvas.h);
 
   console.log('Updating size', w, h, this.transformCanvas);
-  this.pixiApp.renderer.view.style.width = '100%'; // elementWidth + 'px';
-  this.pixiApp.renderer.view.style.height = '100%'; // elementHeight + 'px';
+  this.pixiApplication.renderer.view.style.width = '100%'; // elementWidth + 'px';
+  this.pixiApplication.renderer.view.style.height = '100%'; // elementHeight + 'px';
   // this.canvasContext.beginPath();
   // this.canvasContext.rect(0, 0, this.transformCanvas.w, this.transformCanvas.h);
   // this.canvasContext.closePath();
   // this.canvasContext.clip();
-  this.renderFrame(this.renderedFrame, true);
+  console.log('Render frame next!');
+  // this.renderFrame(this.renderedFrame, true);
 };
 
 PixiRendererBase.prototype.buildItem = function (pos) {

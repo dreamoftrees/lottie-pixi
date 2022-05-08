@@ -65,11 +65,11 @@ PXCompElement.prototype.createComp = function (data) {
 };
 
 PXCompElement.prototype.hideInnerContent = function () {
-  this.globalData.pixiApp.stage.removeChild(this.bg);
+  this.globalData.pixiApplication.stage.removeChild(this.bg);
 };
 
 PXCompElement.prototype.showInnerContent = function () {
-  this.globalData.pixiApp.stage.addChild(this.bg);
+  this.globalData.pixiApplication.stage.addChild(this.bg);
 };
 
 export default PXCompElement;
